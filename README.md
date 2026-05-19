@@ -38,14 +38,6 @@ docker-compose up --build
 - La API estará disponible por defecto en `http://localhost:8080`.
 - Flyway ejecutará las migraciones al arrancar la aplicación (la migración inicial `V1__init.sql` crea la tabla `credit_applications`).
 
-Ejecutar localmente sin Docker (desarrollo)
--------------------------------------------
-Ejecutar desde la JVM local:
-
-```bash
-mvn spring-boot:run
-```
-
 Cómo ejecutar las pruebas
 -------------------------
 - Asegurate de que Docker esté corriendo para las pruebas de integración (Testcontainers).
