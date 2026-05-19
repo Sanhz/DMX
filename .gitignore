@@ -1,28 +1,27 @@
 ### --- Java & Maven (Backend) ---
 # Ignorar compilados y empaquetados
-backend/target/
-backend/*.jar
-backend/*.war
-backend/*.ear
+target/
+*.jar
+*.war
+*.ear
 
 # Maven wrapper y temporales
-backend/.mvn/wrapper/maven-wrapper.jar
-backend/mvnw.cmd
-backend/.mtj.tmp/
+.mvn/wrapper/maven-wrapper.jar
+mvnw.cmd
+.mtj.tmp/
 
 ### --- Spring Boot & Logs ---
 # Logs de la aplicación
-backend/*.log
-backend/logs/
-backend/temp/
+*.log
+logs/
+temp/
 
 ### --- IntelliJ IDEA ---
 .idea/
 *.iws
 *.iml
 *.ipr
-backend/*.iml
-out/
+*.iml
 
 ### --- VS Code ---
 .vscode/
@@ -44,10 +43,3 @@ tmp/
 # Archivos del sistema
 .DS_Store
 Thumbs.db
-
-### --- Environment & Secrets ---
-backend/src/main/resources/application-local.properties
-backend/src/main/resources/*.yml
-backend/src/main/resources/*.properties
-!backend/src/main/resources/application.properties
-.env
