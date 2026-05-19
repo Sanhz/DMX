@@ -22,7 +22,6 @@ backend/temp/
 *.iml
 *.ipr
 backend/*.iml
-out/
 
 ### --- VS Code ---
 .vscode/
