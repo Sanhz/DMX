@@ -20,8 +20,8 @@ Rutas importantes
 - Flyway migrations: `src/main/resources/db/migration`
 - Docker Compose: `docker-compose.yaml`
 
-Cómo levantar la aplicación (rápido)
------------------------------------
+Cómo levantar la aplicación
+---------------------------
 1) Desde la raíz del repo:
 
 ```bash
@@ -29,7 +29,7 @@ git clone https://github.com/Sanhz/DMX.git
 cd dmx
 ```
 
-2) Levantar con Docker Compose (app + Postgres):
+2) Levantar con Docker Compose:
 
 ```bash
 docker-compose up --build
@@ -61,7 +61,7 @@ cd backend
 sudo mvn clean test
 ```
 
-- Ejecutar solo tests unitarios (rápido):
+- Ejecutar solo tests unitarios:
 
 ```bash
 cd backend
