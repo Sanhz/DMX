@@ -1,0 +1,247 @@
+{
+    "info": {
+        "name": "DMX",
+        "description": "",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "CREAR",
+            "description": "",
+            "item": [
+                {
+                    "name": "Crear solicitud",
+                    "description": "",
+                    "event": [],
+                    "auth": {},
+                    "request": {
+                        "auth": {},
+                        "method": "POST",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customerName\":\"Hector Sanchez\",\n  \"customerEmail\":\"hector@test.com\",\n  \"customerRfc\":\"SAHH900101ABC\",\n  \"requestedAmount\":150000,\n  \"currency\":\"MXN\",\n  \"termMonths\":24,\n  \"annualInterestRate\":0.12\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/credit-applications",
+                            "path": [
+                                "api",
+                                "v1",
+                                "credit-applications"
+                            ],
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "port": "8080",
+                            "query": [],
+                            "variable": []
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "strictSSL": false,
+                        "followRedirects": true
+                    }
+                }
+            ],
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                }
+            ],
+            "auth": {}
+        },
+        {
+            "name": "CONSULTAR",
+            "description": "",
+            "item": [
+                {
+                    "name": "Listar solicitudes",
+                    "description": "",
+                    "event": [],
+                    "auth": {},
+                    "request": {
+                        "auth": {},
+                        "method": "GET",
+                        "body": {},
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/credit-applications",
+                            "path": [
+                                "api",
+                                "v1",
+                                "credit-applications"
+                            ],
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "port": "8080",
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0",
+                                    "description": "",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "5",
+                                    "description": "",
+                                    "type": "string"
+                                }
+                            ],
+                            "variable": []
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "strictSSL": false,
+                        "followRedirects": true
+                    }
+                },
+                {
+                    "name": "Consultar una solicitud",
+                    "description": "",
+                    "event": [],
+                    "auth": {},
+                    "request": {
+                        "auth": {},
+                        "method": "GET",
+                        "body": {},
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/credit-applications/5105e2e3-ae61-4f78-8c74-6b9aee977f9e",
+                            "path": [
+                                "api",
+                                "v1",
+                                "credit-applications",
+                                "5105e2e3-ae61-4f78-8c74-6b9aee977f9e"
+                            ],
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "port": "8080",
+                            "query": [],
+                            "variable": []
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "strictSSL": false,
+                        "followRedirects": true
+                    }
+                }
+            ],
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                }
+            ],
+            "auth": {}
+        },
+        {
+            "name": "MODIFICAR",
+            "description": "",
+            "item": [
+                {
+                    "name": "Cambiar estado",
+                    "description": "",
+                    "event": [],
+                    "auth": {},
+                    "request": {
+                        "auth": {},
+                        "method": "PATCH",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\":\"UNDER_REVIEW\",\n  \"reason\":\"Documents received\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/credit-applications/5105e2e3-ae61-4f78-8c74-6b9aee977f9e/status",
+                            "path": [
+                                "api",
+                                "v1",
+                                "credit-applications",
+                                "5105e2e3-ae61-4f78-8c74-6b9aee977f9e",
+                                "status"
+                            ],
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "port": "8080",
+                            "query": [],
+                            "variable": []
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "strictSSL": false,
+                        "followRedirects": true
+                    }
+                }
+            ],
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [],
+                        "type": "text/javascript",
+                        "packages": {}
+                    }
+                }
+            ],
+            "auth": {}
+        }
+    ],
+    "variable": [],
+    "event": [],
+    "auth": {}
+}

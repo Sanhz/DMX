@@ -1,0 +1,526 @@
+Plan Maestro — Proyecto DMX (Prueba Técnica
+Backend)
+Objetivo General
+Construir una API REST profesional para solicitudes de crédito usando:
+Java 21
+Spring Boot 3.x
+Arquitectura Hexagonal
+PostgreSQL
+Docker
+Flyway
+Swagger
+Tests unitarios e integración
+Cache + Resilience
+Todo ejecutable con:
+docker compose up --build
+Repositorio objetivo: https://github.com/Sanhz/DMX
+1. Stack Tecnológico Final
+Backend
+Tecnología Uso
+Java 21 Lenguaje principal
+Spring Boot 3.5.x Framework
+Maven Build tool
+Spring Web REST
+Spring Validation Validaciones
+Spring Data JPA Persistencia
+PostgreSQL 15 Base de datos
+Flyway Migraciones
+Lombok Reducir boilerplate
+MapStruct Mappers
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+1
+Tecnología Uso
+springdoc-openapi Swagger
+Caffeine Cache
+Resilience4j Retry / timeout / circuit breaker
+JUnit 5 Testing
+Mockito Mocks
+Testcontainers Tests integración
+WireMock Mock API externa
+JaCoCo Coverage
+2. Arquitectura Objetivo
+Arquitectura Hexagonal (Ports & Adapters)
+Controller
+ ↓
+Use Case
+ ↓
+Domain
+ ↓
+Ports
+ ↓
+Adapters
+ ↓
+Infrastructure
+3. Estructura Final del Repositorio
+DMX/
+│
+├── backend/
+│ ├── src/
+│ ├── Dockerfile
+│ ├── pom.xml
+│ ├── mvnw
+│ └── README.md
+│
+├── docker-compose.yml
+2
+│
+├── .gitignore
+│
+└── README.md
+4. Estructura Interna del Backend
+Package Structure
+com.sanhz.dmx
+│
+├── domain
+│ ├── model
+│ ├── enums
+│ ├── exception
+│ ├── port
+│ │ ├── in
+│ │ └── out
+│ └── service
+│
+├── application
+│ └── service
+│
+├── infrastructure
+│ ├── adapter
+│ │ ├── in
+│ │ │ └── web
+│ │ └── out
+│ │ ├── persistence
+│ │ └── external
+│ │
+│ ├── config
+│ └── mapper
+│
+└── shared
+5. Orden Exacto de Construcción
+FASE 1 — Inicialización del Proyecto
+3
+Paso 1 — Crear el repositorio
+Objetivo
+Tener el repo inicial listo.
+Acciones
+Crear repo:
+DMX
+Clonar:
+git clone git@github.com:Sanhz/DMX.git
+cd DMX
+Paso 2 — Crear estructura base
+Objetivo
+Separar backend desde el inicio.
+Acciones
+mkdir backend
+cd backend
+Paso 3 — Crear proyecto Spring Boot
+Objetivo
+Generar proyecto base profesional.
+Herramienta
+https://start.spring.io
+4
+Configuración
+Project
+Maven
+Language
+Java
+Spring Boot
+3.5.x
+Java
+21
+Group
+com.sanhz
+Artifact
+dmx
+Name
+dmx
+Packaging
+jar
+5
+Paso 4 — Dependencias Iniciales
+Agregar
+Spring Web
+Spring Data JPA
+Validation
+PostgreSQL Driver
+Flyway
+Lombok
+Paso 5 — Descomprimir proyecto
+Mover contenido generado dentro de:
+DMX/backend
+Paso 6 — Probar compilación local
+Objetivo
+Validar que Java y Maven funcionan.
+Comandos
+./mvnw clean package
+FASE 2 — Dockerización
+Paso 7 — Crear Dockerfile
+Objetivo
+Docker multi-stage profesional.
+6
+Archivo
+backend/Dockerfile
+Tecnologías
+Maven Image
+Eclipse Temurin
+Paso 8 — Crear docker-compose.yml
+Objetivo
+Levantar TODO con un solo comando.
+Servicios
+postgres
+postgres:15-alpine
+backend
+build local
+Paso 9 — Variables de entorno
+Configurar
+SPRING_DATASOURCE_URL
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+Paso 10 — Validar Docker
+Comando
+docker compose up --build
+•
+•
+•
+•
+7
+Resultado esperado
+PostgreSQL levantado
+Backend levantado
+Sin errores
+FASE 3 — Configuración Base Spring
+Paso 11 — application.yml
+Objetivo
+Configuración centralizada.
+Configurar
+Datasource
+JPA
+Flyway
+Logging
+Swagger
+External API URL
+Paso 12 — Configurar perfiles
+Crear
+application-local.yml
+application-docker.yml
+FASE 4 — Base de Datos
+•
+•
+•
+8
+Paso 13 — Configurar Flyway
+Objetivo
+NO usar ddl-auto.
+Crear ruta
+src/main/resources/db/migration
+Paso 14 — Crear migración V1
+Archivo
+V1__init.sql
+Contenido
+Tabla:
+credit_applications
+Exactamente como el PDF.
+Paso 15 — Validar migración
+Revisar logs
+Debe aparecer:
+Flyway migration successful
+FASE 5 — Dominio
+9
+Paso 16 — Crear enums
+CreditStatus
+CREATED
+UNDER_REVIEW
+APPROVED
+REJECTED
+CANCELLED
+Paso 17 — Crear entidad de dominio
+Clase
+CreditApplication
+MUY IMPORTANTE
+NO usar:
+@Entity
+Spring
+JPA
+Dominio puro.
+Paso 18 — Implementar lógica financiera
+Fórmula requerida
+M = P * r / (1 - (1 + r)^-n)
+Objetivo
+Calcular:
+monthlyPayment
+totalToPay
+•
+•
+•
+•
+•
+10
+Paso 19 — Implementar reglas de estado
+Validar transiciones
+Ejemplos:
+CREATED → UNDER_REVIEW
+UNDER_REVIEW → APPROVED
+Invalidar:
+CREATED → APPROVED
+Paso 20 — Crear excepciones de dominio
+Ejemplos
+InvalidStatusTransitionException
+CreditApplicationNotFoundException
+FASE 6 — Puertos Hexagonales
+Paso 21 — Crear puertos IN
+Interfaces
+CreateCreditApplicationUseCase
+GetCreditApplicationUseCase
+ListCreditApplicationsUseCase
+ChangeCreditApplicationStatusUseCase
+•
+•
+•
+11
+Paso 22 — Crear puertos OUT
+Interfaces
+CreditApplicationRepositoryPort
+ExchangeRateProvider
+FASE 7 — Application Layer
+Paso 23 — Implementar Use Cases
+Servicios
+CreateCreditApplicationService
+GetCreditApplicationService
+ListCreditApplicationService
+ChangeCreditApplicationStatusService
+Paso 24 — Integrar ExchangeRateProvider
+Objetivo
+NO llamar HTTP directamente desde el dominio.
+FASE 8 — Persistencia
+Paso 25 — Crear entidad JPA
+Clase
+CreditApplicationEntity
+12
+Aquí SÍ usar:
+@Entity
+@Table
+Paso 26 — Crear JpaRepository
+Interface
+extends JpaRepository
+Paso 27 — Crear Adapter de persistencia
+Objetivo
+Traducir:
+dominio ↔ JPA
+Paso 28 — Crear MapStruct Mappers
+Mappers
+CreditApplicationMapper
+FASE 9 — API Externa
+Paso 29 — Crear RestClientConfig
+Objetivo
+Centralizar HTTP client.
+•
+•
+•
+13
+Paso 30 — Implementar Frankfurter Adapter
+Clase
+FrankfurterExchangeRateAdapter
+Tecnología
+RestClient
+Paso 31 — Timeout
+Configurar
+3 segundos
+Paso 32 — Cache
+Tecnología
+Caffeine
+TTL
+1 hora
+Paso 33 — Resilience4j
+Implementar
+Retry
+Circuit Breaker
+Timeout
+•
+•
+•
+14
+Paso 34 — Manejar errores externos
+Regla
+Si Frankfurter falla:
+NO romper creación
+guardar USD/EUR en null
+FASE 10 — REST API
+Paso 35 — Crear DTOs
+Usar
+record
+Paso 36 — Validaciones Bean Validation
+Ejemplos
+@NotNull
+@Email
+@Size
+@DecimalMin
+Paso 37 — Controllers REST
+Endpoints
+POST
+/api/v1/credit-applications
+•
+•
+15
+GET by id
+/api/v1/credit-applications/{id}
+GET list
+/api/v1/credit-applications
+PATCH status
+/api/v1/credit-applications/{id}/status
+Paso 38 — Global Exception Handler
+Tecnología
+@RestControllerAdvice
+Paso 39 — Error Response estándar
+Formato
+Según PDF.
+FASE 11 — Swagger
+Paso 40 — Configurar OpenAPI
+Dependencia
+springdoc-openapi
+16
+Paso 41 — Validar Swagger
+URL
+http://localhost:8080/swagger-ui.html
+FASE 12 — Testing
+Paso 42 — Unit tests dominio
+Probar
+monthly payment
+state transitions
+Paso 43 — Unit tests application
+Mockear
+ExchangeRateProvider
+Paso 44 — Integration tests
+Tecnologías
+Testcontainers
+PostgreSQL real
+WireMock
+Frankfurter mock
+•
+•
+•
+•
+17
+Paso 45 — JaCoCo
+Objetivo
+Coverage:
+>= 70%
+FASE 13 — README Profesional
+Paso 46 — README raíz
+Debe incluir
+Arquitectura
+Cómo levantar
+Cómo probar
+Swagger
+Docker
+Tests
+Decisiones técnicas
+Paso 47 — Mermaid diagram
+Agregar diagrama
+graph TD
+A[REST Controller] --> B[Use Cases]
+B --> C[Domain]
+B --> D[Ports]
+D --> E[Adapters]
+E --> F[PostgreSQL]
+E --> G[Frankfurter API]
+18
+Paso 48 — Colección Postman
+Crear requests para:
+create
+get
+list
+patch status
+FASE 14 — Pulido Final
+Paso 49 — Revisar banderas rojas
+Validar que NO exista:
+lógica en controller
+JPA en dominio
+double/float
+ddl-auto=update
+Paso 50 — Validación final completa
+Comando oficial
+docker compose up --build
+Debe funcionar:
+postgres
+backend
+flyway
+swagger
+endpoints
+6. Prioridad REAL
+Obligatorio
+Arquitectura limpia
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+1.
+19
+Docker
+PostgreSQL
+Flyway
+Endpoints
+Tests
+README
+Bonus recomendados
+Swagger
+Cache
+Resilience4j
+Testcontainers
+JaCoCo
+NO recomendados para tiempo limitado
+Frontend complejo
+RabbitMQ
+AKS
+Installments completos
+7. Resultado Esperado
+Al finalizar tendrás:
+API profesional
+Arquitectura senior
+Dockerizado
+Testeado
+Documentado
+Fácil de correr
+Fácil de evaluar
+Muy fuerte técnicamente para entrevista
+2.
+3.
+4.
+5.
+6.
+7.
+1.
+2.
+3.
+4.
+5.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+20

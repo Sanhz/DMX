@@ -1,0 +1,423 @@
+Prueba Tecnica Take-Home - DMX
+Sistema de Solicitudes de Credito
+Spring Boot + Arquitectura Hexagonal + PostgreSQL + Docker + API publica
+Resumen ejecutivo
+Construye una API REST que reciba solicitudes de credito, calcule la cuota mensual, consulte una API
+publica de tipos de cambio para mostrar el monto en otras divisas, y persista todo en PostgreSQL.
+Debe seguir arquitectura hexagonal y levantarse con un solo comando (docker-compose up). Incluye
+pruebas unitarias. Plazo maximo: 2 dias naturales desde la entrega del documento.
+Datos generales de la prueba
+Campo Valor
+Posicion Desarrollador(a) Backend
+Dominio del ejercicio Solicitudes de credito (fintech)
+Stack obligatorio Java 17+ / Spring Boot 3.x / PostgreSQL 15+ / Docker
+Tiempo maximo de entrega 2 dias naturales (48 hrs) desde que recibes este documento
+Modalidad Take-home. Entrega via repositorio Git publico o privado con
+acceso
+API externa a integrar Frankfurter API (sin autenticacion, gratis)
+Idioma del codigo Ingles para nombres tecnicos; comentarios en espanol o ingles
+Que se evalua Arquitectura, calidad de codigo, pruebas, manejo de errores,
+integracion externa y entregable funcional
+Importante - Plazo y comunicacion
+Tienes 2 dias naturales (48 hrs) para entregar. Si requieres mas tiempo por algun motivo valido, avisa
+antes de que venza el plazo. No es una prueba de aislamiento: si tienes dudas funcionales o de
+scope, escribenos. Las dudas tecnicas resuelvelas tu mismo (documentacion, Stack Overflow, etc.).
+1. Contexto del ejercicio
+Una fintech esta construyendo un nuevo sistema de originacion de creditos. Tu tarea es desarrollar el
+microservicio que recibe solicitudes de credito de los clientes, calcula la cuota mensual estimada con base
+en una tasa anual fija, y enriquece la solicitud con el equivalente del monto solicitado en otras divisas
+(USD y EUR) consultando una API publica de tipos de cambio.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 2
+La solicitud se persiste en PostgreSQL y puede cambiar de estado a lo largo del flujo: CREATED (recien
+capturada) -> UNDER_REVIEW (analista la esta revisando) -> APPROVED / REJECTED / CANCELLED.
+La empresa ha definido como estandar la arquitectura hexagonal (ports and adapters) para garantizar que
+la logica del dominio sea independiente de frameworks y de la base de datos, y para poder testear sin
+depender de la API externa. Todo el entorno debe ser levantable localmente con un solo comando
+(docker-compose up).
+2. Requisitos tecnicos obligatorios
+• Java 17 o superior.
+• Spring Boot 3.x (Web, Data JPA, Validation).
+• PostgreSQL 15+ como base de datos (no usar H2 ni in-memory en el entregable final).
+• Maven o Gradle como build tool.
+• Arquitectura hexagonal con separacion clara entre dominio, aplicacion e infraestructura.
+• Docker y docker-compose: la app, la base de datos y cualquier servicio extra deben levantarse
+con un solo comando.
+• Integracion con la API publica Frankfurter para obtener tipos de cambio.
+• Pruebas unitarias con JUnit 5 y Mockito (minimo en la capa de dominio y aplicacion).
+• Manejo global de errores con @RestControllerAdvice.
+• Validacion de DTOs de entrada con Bean Validation (@Valid).
+• Migraciones de base de datos con Flyway (o equivalente) - no usar ddl-auto=update.
+• README.md con instrucciones claras de como levantar y probar la API.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 3
+3. API publica a integrar: Frankfurter
+Vas a consumir la API publica Frankfurter para obtener tipos de cambio. Es gratuita, no requiere API key
+y entrega datos del Banco Central Europeo (ECB).
+Campo Valor
+Sitio oficial https://frankfurter.dev
+Base URL https://api.frankfurter.dev/v1
+Autenticacion Ninguna (es publica y gratuita)
+Rate limit Razonable para pruebas - cachea cuando puedas
+3.1 Endpoint a usar
+Obtener el ultimo tipo de cambio MXN a USD y EUR:
+GET https://api.frankfurter.dev/v1/latest?base=MXN&symbols=USD,EUR
+# Respuesta de ejemplo:
+{
+ "amount": 1.0,
+ "base": "MXN",
+ "date": "2026-05-11",
+ "rates": {
+ "EUR": 0.052,
+ "USD": 0.058
+ }
+}
+3.2 Como debes usarla en este ejercicio
+• Cada vez que se crea una nueva solicitud de credito, llama a Frankfurter para obtener la tasa
+MXN -> USD y MXN -> EUR del dia.
+• Calcula el equivalente del monto solicitado en USD y EUR y guardalo en la base de datos.
+• Si la API esta caida o tarda mas de 3 segundos, NO debe romper la creacion. Guarda los campos
+como null y registra un warning en logs (los campos son informativos, no criticos).
+• Implementa la llamada detras de un puerto del dominio: el dominio NO debe saber que existe
+Frankfurter.
+• Idealmente cachea la respuesta por 1 hora para no llamar cada vez (bonus).
+Implementacion del puerto
+Define en el dominio una interfaz ExchangeRateProvider con un metodo 'getRates(baseCurrency,
+targetCurrencies)'. Crea un adapter FrankfurterExchangeRateAdapter en infrastructure que la
+implemente usando RestClient o WebClient. Asi puedes mockearlo facil en pruebas y, si manana
+cambia el proveedor, solo se reemplaza el adapter.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 4
+4. Especificaciones funcionales (la API)
+La API expone los siguientes endpoints. Todos en formato JSON.
+4.1 POST /api/v1/credit-applications - Crear solicitud
+Crea una nueva solicitud en estado CREATED.
+Request body:
+{
+ "customerName": "Juan Perez Ramirez",
+ "customerEmail": "juan.perez@example.com",
+ "customerRfc": "PERJ850101ABC",
+ "requestedAmount": 250000.00,
+ "currency": "MXN",
+ "termMonths": 24,
+ "annualInterestRate": 0.18
+}
+Reglas de validacion:
+• customerName: obligatorio, 3 a 120 caracteres.
+• customerEmail: obligatorio, formato email.
+• customerRfc: opcional, si viene debe tener 12 o 13 caracteres alfanumericos.
+• requestedAmount: obligatorio, > 0, maximo 5,000,000.
+• currency: obligatorio, default 'MXN'. Solo se acepta 'MXN' por ahora.
+• termMonths: obligatorio, entero entre 6 y 60.
+• annualInterestRate: obligatorio, decimal entre 0.05 y 0.60 (es decir 5% a 60% anual).
+Logica del dominio al crear:
+1. Calcular la cuota mensual con formula de amortizacion francesa:
+r = annualInterestRate / 12
+monthlyPayment = P * r / (1 - (1 + r)^-n)
+ donde P = requestedAmount, n = termMonths
+totalToPay = monthlyPayment * termMonths
+2. Consultar Frankfurter para obtener tasa MXN -> USD y MXN -> EUR.
+3. Calcular y guardar amountUsd = requestedAmount * rateUsd.
+4. Calcular y guardar amountEur = requestedAmount * rateEur.
+5. Persistir la solicitud con status = CREATED.
+6. Responder 201 Created con el body completo de la solicitud creada.
+4.2 GET /api/v1/credit-applications/{id} - Consultar una solicitud
+• Si existe: 200 con el body completo.
+• Si no existe: 404 con cuerpo de error consistente.
+4.3 GET /api/v1/credit-applications - Listar solicitudes
+• Filtros opcionales (query params): status, customerRfc, minAmount, maxAmount.
+• Paginacion: page (default 0), size (default 20).
+• Ordenamiento: por createdAt descendente por default.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 5
+4.4 PATCH /api/v1/credit-applications/{id}/status - Cambiar estado
+Request body:
+{
+ "status": "APPROVED",
+ "reason": "Cumple politicas crediticias y tiene buen historial"
+}
+Transiciones validas:
+• CREATED -> UNDER_REVIEW
+• UNDER_REVIEW -> APPROVED
+• UNDER_REVIEW -> REJECTED
+• CREATED -> CANCELLED
+• UNDER_REVIEW -> CANCELLED
+Cualquier otra transicion: 409 Conflict con mensaje claro. APPROVED, REJECTED y CANCELLED son estados
+terminales.
+4.5 Formato de error estandar
+{
+ "timestamp": "2026-05-11T14:30:00Z",
+ "status": 400,
+ "error": "Bad Request",
+ "code": "VALIDATION_ERROR",
+ "message": "annualInterestRate must be between 0.05 and 0.60",
+ "path": "/api/v1/credit-applications"
+}
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 6
+5. Base de datos PostgreSQL - DDL minimo
+Crea esta tabla via migracion de Flyway (V1__init.sql). Es la tabla minima obligatoria. Mas abajo hay
+sugerencias de tablas adicionales (bonus).
+5.1 Tabla obligatoria: credit_applications
+CREATE TABLE credit_applications (
+ id UUID PRIMARY KEY,
+ customer_name VARCHAR(120) NOT NULL,
+ customer_email VARCHAR(160) NOT NULL,
+ customer_rfc VARCHAR(13),
+ requested_amount NUMERIC(15, 2) NOT NULL CHECK (requested_amount > 0),
+ currency CHAR(3) NOT NULL DEFAULT 'MXN',
+ term_months INTEGER NOT NULL CHECK (term_months BETWEEN 6 AND 60),
+ annual_interest_rate NUMERIC(5, 4) NOT NULL,
+ monthly_payment NUMERIC(15, 2) NOT NULL,
+ total_to_pay NUMERIC(15, 2) NOT NULL,
+ amount_usd NUMERIC(15, 2),
+ amount_eur NUMERIC(15, 2),
+ exchange_rate_date DATE,
+ status VARCHAR(20) NOT NULL DEFAULT 'CREATED',
+ status_reason TEXT,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ CONSTRAINT chk_status CHECK (status IN
+ ('CREATED','UNDER_REVIEW','APPROVED','REJECTED','CANCELLED'))
+);
+CREATE INDEX idx_credit_applications_status ON credit_applications(status);
+CREATE INDEX idx_credit_applications_rfc ON credit_applications(customer_rfc);
+CREATE INDEX idx_credit_applications_created_at ON credit_applications(created_at DESC);
+Sobre el tipo de monto
+Usa NUMERIC / BigDecimal para montos monetarios. Nunca double/float - introducen errores de
+redondeo inaceptables en sistemas financieros.
+5.2 Incrementales sugeridos (bonus - una segunda migracion V2__...)
+Si te alcanza el tiempo, agrega alguna(s) de estas tablas. Suman puntos:
+a) Tabla de eventos / audit log:
+CREATE TABLE credit_application_events (
+ id BIGSERIAL PRIMARY KEY,
+ application_id UUID NOT NULL REFERENCES credit_applications(id),
+ event_type VARCHAR(40) NOT NULL,
+ old_status VARCHAR(20),
+ new_status VARCHAR(20),
+ payload JSONB,
+ occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ actor VARCHAR(120)
+);
+CREATE INDEX idx_events_application ON credit_application_events(application_id);
+CREATE INDEX idx_events_occurred_at ON credit_application_events(occurred_at DESC);
+b) Tabla de cuotas (amortizacion):
+CREATE TABLE installments (
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 7
+ id BIGSERIAL PRIMARY KEY,
+ application_id UUID NOT NULL REFERENCES credit_applications(id),
+ installment_no INTEGER NOT NULL,
+ due_date DATE NOT NULL,
+ principal NUMERIC(15, 2) NOT NULL,
+ interest NUMERIC(15, 2) NOT NULL,
+ amount_total NUMERIC(15, 2) NOT NULL,
+ paid BOOLEAN NOT NULL DEFAULT FALSE,
+ paid_at TIMESTAMPTZ,
+ UNIQUE (application_id, installment_no)
+);
+c) Tabla de cliente (normalizacion - 1 cliente N solicitudes):
+CREATE TABLE customers (
+ id UUID PRIMARY KEY,
+ rfc VARCHAR(13) UNIQUE,
+ full_name VARCHAR(120) NOT NULL,
+ email VARCHAR(160) NOT NULL,
+ phone VARCHAR(20),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- Y agregar customer_id en credit_applications haciendo FK
+Sobre los incrementales
+No es obligatorio implementarlos. Son evaluados como bonus. Es mejor tener la tabla obligatoria
+bien hecha y testeada, que tener todas las tablas a medias.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 8
+6. Arquitectura hexagonal - estructura sugerida
+La separacion en capas debe ser explicita en los paquetes. Sugerencia:
+com.example.credit
+ domain/
+ model/ # CreditApplication, Money, CreditStatus
+ exception/ # InvalidStatusTransitionException, etc.
+ port/
+ in/ # CreateCreditApplicationUseCase,
+GetCreditApplicationUseCase, ChangeStatusUseCase
+ out/
+ CreditApplicationRepository.java # puerto de persistencia
+ ExchangeRateProvider.java # puerto para Frankfurter
+ application/
+ service/ # implementacion de los use cases
+ infrastructure/
+ adapter/
+ in/web/ # Controllers REST, DTOs, mappers, exception handler
+ out/
+ persistence/ # JPA entities, JpaRepository, Adapter
+ external/ # FrankfurterExchangeRateAdapter
+ config/ # ResilienceConfig, RestClientConfig, etc.
+Regla clave
+El paquete 'domain' NO debe importar nada de Spring, JPA, Jackson, ni de la libreria HTTP. Si lo
+importa, no es hexagonal. La interfaz ExchangeRateProvider debe estar en domain.port.out. La
+implementacion (que llama a Frankfurter) en infrastructure.
+7. Setup inicial - archivos clave
+7.1 docker-compose.yml
+version: "3.9"
+services:
+ postgres:
+ image: postgres:15-alpine
+ container_name: credit-postgres
+ environment:
+ POSTGRES_DB: creditdb
+ POSTGRES_USER: credit
+ POSTGRES_PASSWORD: credit
+ ports:
+ - "5432:5432"
+ healthcheck:
+ test: ["CMD-SHELL", "pg_isready -U credit -d creditdb"]
+ interval: 5s
+ timeout: 3s
+ retries: 10
+ app:
+ build: .
+ container_name: credit-app
+ depends_on:
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 9
+ postgres:
+ condition: service_healthy
+ environment:
+ SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/creditdb
+ SPRING_DATASOURCE_USERNAME: credit
+ SPRING_DATASOURCE_PASSWORD: credit
+ EXTERNAL_FRANKFURTER_URL: https://api.frankfurter.dev/v1
+ ports:
+ - "8080:8080"
+7.2 Dockerfile (multi-stage)
+# ---- build ----
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B clean package -DskipTests
+# ---- runtime ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","/app/app.jar"]
+7.3 pom.xml - dependencias minimas
+<dependencies>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-web</artifactId>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-data-jpa</artifactId>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-validation</artifactId>
+ </dependency>
+ <dependency>
+ <groupId>org.postgresql</groupId>
+ <artifactId>postgresql</artifactId>
+ <scope>runtime</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.flywaydb</groupId>
+ <artifactId>flyway-core</artifactId>
+ </dependency>
+ <dependency>
+ <groupId>org.flywaydb</groupId>
+ <artifactId>flyway-database-postgresql</artifactId>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-test</artifactId>
+ <scope>test</scope>
+ </dependency>
+</dependencies>
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 10
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 11
+8. Pruebas unitarias requeridas
+Como minimo deben existir pruebas para:
+• Calculo de la cuota mensual (varios escenarios: tasas y plazos distintos, incluido tasa = 0 si
+aplica).
+• Logica de transicion de estados (no se puede pasar de CREATED a APPROVED, etc.).
+• CreateCreditApplicationService: cuando el ExchangeRateProvider responde bien (mock), la
+solicitud guarda los montos en USD/EUR. Cuando falla, la solicitud se crea con esos campos en
+null.
+• Validaciones de entrada (montos, plazos, RFC invalido).
+• Manejo del status en el ChangeStatusUseCase (transiciones validas/invalidas).
+Buenas practicas esperadas
+Usar JUnit 5 + Mockito. Aplicar Arrange-Act-Assert. Probar casos felices y de error. Los tests del
+dominio (entidad CreditApplication, calculo de cuota) NO deben depender de Spring. Solo Java puro
++ JUnit.
+9. Entregables
+7. Repositorio Git (publico o privado con acceso a los entrevistadores).
+8. README.md con:
+◦ Como levantar (docker-compose up).
+◦ Como probar (coleccion Postman o ejemplos cURL).
+◦ Decisiones tecnicas: que asumiste, que dejaste fuera, por que.
+◦ Como correr las pruebas (./mvnw test).
+◦ Como ejecutar las migraciones (Flyway corre automatico al iniciar).
+◦ Si hiciste algun bonus, mencionalo explicitamente.
+9. Coleccion de Postman o curl listo para los 4 endpoints (suma).
+10. Diagrama simple de arquitectura (puede ser mermaid en el README, ASCII o draw.io
+exportado).
+10. Bonus (suman puntos pero no son obligatorios)
+• Cache de tipos de cambio: evita llamar a Frankfurter en cada creacion. Usa @Cacheable o
+Caffeine con TTL de 1 hora.
+• Resilience4j: circuit breaker, retry y timeout en la llamada a Frankfurter.
+• Tabla de eventos: registrar en credit_application_events cada cambio de estado.
+• Tabla de cuotas: al aprobar una solicitud, generar el plan de pagos (installments)
+automaticamente.
+• Tabla de clientes: normalizar; si el RFC ya existe, reutilizar el cliente.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 12
+• RabbitMQ: agregado al docker-compose. Publicar evento 'credit.application.created' al crear y
+'credit.application.status_changed' al cambiar estado.
+• JaCoCo: configurado y reporte generado. Idealmente >= 70% en dominio y aplicacion.
+• Idempotencia: en POST de creacion via header Idempotency-Key.
+• Tests de integracion: con Testcontainers (PostgreSQL real) y WireMock (mockear Frankfurter).
+• OpenAPI / Swagger UI: expuesto en /swagger-ui.html con springdoc-openapi.
+• Logs estructurados: con SLF4J + JSON layout, incluyendo correlation/trace id.
+• Pipeline CI: GitHub Actions o Azure Pipelines que corra mvn verify.
+• Despliegue Azure: documentar (no implementar) como lo desplegarias en Azure App Service o
+AKS.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 13
+11. Criterios de evaluacion
+Bloque Peso Que se evalua
+Funcionalidad 20% Los 4 endpoints funcionan segun las reglas. La API externa se
+consume correctamente.
+Arquitectura hexagonal 20% Separacion correcta. Dominio puro sin Spring/JPA/HTTP.
+ExchangeRateProvider detras de puerto.
+Calidad de codigo 15% Legibilidad, nombres, sin duplicacion, principios SOLID.
+Manejo de errores 10% Errores con formato consistente. Timeout/fallo de Frankfurter
+no rompe la creacion.
+Pruebas unitarias 15% Existen, son significativas y cubren casos de error. Calculo de
+cuota probado.
+BD / Migraciones 5% Flyway corre limpio. Indices y constraints adecuados. Tipos
+NUMERIC en montos.
+Docker / setup 5% Levanta con un solo comando.
+Documentacion 5% README claro y completo.
+Bonus 5% Lo que se haya implementado de la seccion 10.
+12. Banderas rojas (que NO hacer)
+• Meter logica de negocio dentro del controller.
+• Inyectar el JpaRepository directamente al service.
+• Hacer la llamada HTTP a Frankfurter desde el service de aplicacion sin puerto.
+• Usar H2 o base en memoria 'porque es mas rapido'.
+• Usar ddl-auto=update en lugar de Flyway.
+• Usar double/float para los montos (pierdes precision).
+• Que un fallo de Frankfurter rompa la creacion de la solicitud.
+• Subir credenciales reales o el target/ al repositorio.
+• No tener pruebas o tener solo pruebas triviales (testear getters/setters).
+• Devolver siempre 200 con un campo error - usar codigos HTTP correctos.
+13. Preguntas frecuentes
+Puedo usar Lombok? Si.
+Puedo usar MapStruct? Si.
+Records de Java en lugar de Lombok? Si, especialmente para DTOs.
+Prueba Tecnica Take-Home - Solicitudes de Credito | Pagina 14
+Si Frankfurter esta caido durante mi prueba, que hago? Documenta el caso en el README, asegurate de
+que tu codigo no rompa la creacion (la regla de tolerancia a fallos sigue siendo evaluable) y prueba con un
+mock que simule la respuesta.
+Que pasa si no termino los bonus? No pasa nada, son opcionales. Es mejor entregar lo obligatorio bien
+hecho.
+Puedo usar otro lenguaje (Node, .NET, Python)? Esta prueba esta orientada a Java/Spring Boot. Si quieres
+proponer otro stack, consulta primero.
+Cuanto debo invertir en estilo / colores / front? Cero. Esta prueba es 100% backend, no hay UI.
+Que pasa si necesito un dia mas? Avisa antes de que venza el plazo de 2 dias. Es preferible un dia extra
+que una entrega a medias.
+Contacto
+Si tienes dudas funcionales o de scope, escribe al Tech Lead - respuesta en menos de 24 horas. Las
+dudas tecnicas resuelvelas con documentacion oficial o tu juicio. Pedir ayuda en lo funcional no resta

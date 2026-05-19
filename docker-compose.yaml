@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dmx-postgres
+
+    environment:
+      POSTGRES_DB: dmxdb
+      POSTGRES_USER: dmx
+      POSTGRES_PASSWORD: dmx
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dmx -d dmxdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    restart: unless-stopped
+
+  backend:
+    build:
+      dockerfile: Dockerfile
+
+    container_name: dmx-backend
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dmxdb
+      SPRING_DATASOURCE_USERNAME: dmx
+      SPRING_DATASOURCE_PASSWORD: dmx
+
+      EXTERNAL_FRANKFURTER_URL: https://api.frankfurter.dev/v1
+
+      SERVER_PORT: 8080
+
+      JAVA_OPTS: >
+        -Xms256m
+        -Xmx512m
+
+    ports:
+      - "8080:8080"
+
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
