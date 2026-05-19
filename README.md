@@ -1,5 +1,5 @@
 # DMX
-Prueba técnica para DMX
+Prueba técnica para DMX.
 
 Resumen
 --------
@@ -14,10 +14,10 @@ Requisitos
 
 Rutas importantes
 ------------------
-- Código backend: `backend/src/main/java`
-- Tests: `backend/src/test/java`
-- `pom.xml`: `backend/pom.xml`
-- Flyway migrations: `backend/src/main/resources/db/migration`
+- Código backend: `src/main/java`
+- Tests: `src/test/java`
+- `pom.xml`: `pom.xml`
+- Flyway migrations: `src/main/resources/db/migration`
 - Docker Compose: `docker-compose.yaml`
 
 Cómo levantar la aplicación (rápido)
@@ -40,13 +40,7 @@ docker-compose up --build
 
 Ejecutar localmente sin Docker (desarrollo)
 -------------------------------------------
-1) Ir al módulo backend:
-
-```bash
-cd backend
-```
-
-2) Ejecutar desde la JVM local:
+Ejecutar desde la JVM local:
 
 ```bash
 mvn spring-boot:run
@@ -113,17 +107,16 @@ curl -s -X POST http://localhost:8080/api/v1/credit-applications \
     "annualInterestRate": 0.12
   }'
 ```
-
-2) Obtener solicitud por id (GET)
-
-```bash
-curl -s http://localhost:8080/api/v1/credit-applications/<id>
-```
-
-3) Listar solicitudes con paginación (GET)
+2) Listar solicitudes con paginación (GET)
 
 ```bash
 curl -s "http://localhost:8080/api/v1/credit-applications?page=0&size=10"
+```
+
+3) Obtener solicitud por id (GET)
+
+```bash
+curl -s http://localhost:8080/api/v1/credit-applications/<id>
 ```
 
 4) Actualizar estado de una solicitud (PATCH)
@@ -136,7 +129,7 @@ curl -s -X PATCH http://localhost:8080/api/v1/credit-applications/<id>/status \
 
 Postman
 -------
-- Hay una colección Postman simplificada en `docs/DMX.postman.json` con las peticiones básicas para los endpoints. Impórtala en Postman o ejecútala con `newman` si lo deseas.
+- Hay una colección Postman simplificada en `docs/DMX.postman.json` con las peticiones básicas para los endpoints. Impórtala en Postman si lo deseas.
 
 Swagger / OpenAPI
 ------------------
